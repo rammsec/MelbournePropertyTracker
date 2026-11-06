@@ -1,0 +1,4 @@
+listing_id,street_address,suburb_name,postcode,property_type,bedrooms,bathrooms,car_spaces,land_size_sqm,latitude,longitude,price_guide_raw,agency_name,agent_name,price_revisions_count,last_price_cut_pct,sale_method
+DOM-7001,24 Victoria Street,Brunswick,3056,House,3,2,1,405,-37.7672,144.9631,"$1.05M - $1.12M",Nelson Alexander,Tom Roberts,0,0.0,Auction
+DOM-7002,89 Cramer Street,Preston,3072,House,3,2,2,470,-37.7418,145.0055,"$880,000 - $940,000",Jellis Craig,Sarah Chen,1,-4.5,Private Treaty
+DOM-7003,"Unit 4, 55 Barkly Street",Footscray,3011,Unit,2,1,1,128,-37.7990,144.9012,"$560k - $600k",Jas Stephens,Liam O'Connor,2,-5.8,Private Treaty

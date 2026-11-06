@@ -1,0 +1,7 @@
+sale_id,street_address,suburb_name,postcode,property_type,bedrooms,bathrooms,car_spaces,land_size_sqm,latitude,longitude,settlement_date,sold_price,sale_method
+VG-9001,18 Albert Street,Brunswick,3056,House,3,2,1,410,-37.7681,144.9622,2026-08-14,1320000,Auction
+VG-9002,42 Blyth Street,Brunswick,3056,Townhouse,3,2,1,210,-37.7640,144.9595,2026-09-02,1065000,Auction
+VG-9003,115 Cramer Street,Preston,3072,House,3,2,2,485,-37.7412,145.0041,2026-07-21,1140000,Auction
+VG-9004,"Unit 2, 88 High Street",Preston,3072,Unit,2,1,1,135,-37.7445,145.0012,2026-09-18,675000,Private Treaty
+VG-9005,29 Barkly Street,Footscray,3011,House,3,1,1,345,-37.7985,144.8990,2026-08-29,945000,Auction
+VG-9006,74 Murray Road,Coburg,3058,House,4,2,2,530,-37.7421,144.9680,2026-10-05,1285000,Auction
