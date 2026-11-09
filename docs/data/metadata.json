@@ -1,0 +1,23 @@
+{
+  "updated_at_utc": "2026-11-09T07:08:52.948014+00:00",
+  "total_active_listings": 545,
+  "total_settled_sales": 540,
+  "avm_metrics": {
+    "model_backend": "HistGradientBoostingRegressor",
+    "r2": 0.915,
+    "mape_pct": 9.97,
+    "mae_aud": 164191.69
+  },
+  "agencies_scraped": [
+    "Barry Plant",
+    "Ray White",
+    "View.com.au Live",
+    "Domain / REA"
+  ],
+  "risk_summary": {
+    "Distressed / Urgent Seller Deal": 252,
+    "Low Risk (Accurate Guide)": 236,
+    "Moderate Underquoting Risk": 13,
+    "High Underquoting Risk": 44
+  }
+}
