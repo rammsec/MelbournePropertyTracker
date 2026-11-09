@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Melbourne Property Tracker | Valuation & Due Diligence Intelligence</title>
+  <title>Melbourne Property Tracker | Real Estate Valuation & Due Diligence</title>
   <meta name="description" content="Automated Melbourne property valuation, underquoting detector, defect screener, and First-Home Buyer Cash-to-Close calculator.">
   
-  <!-- Favicon / Fonts / Leaflet CSS -->
+  <!-- Fonts & Leaflet CSS -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -21,21 +21,26 @@
         <div class="brand-icon">🏢</div>
         <div>
           <div class="brand-title">Melbourne Property Tracker</div>
-          <div class="brand-subtitle">Real Estate Valuation & Underquoting Intelligence</div>
+          <div class="brand-subtitle">Valuation, Underquoting & FHB Intelligence</div>
         </div>
       </div>
 
-      <nav class="nav-tabs">
+      <nav class="nav-tabs" aria-label="Main Navigation">
         <button class="nav-btn active" data-tab="tracker-tab">📍 Interactive Tracker</button>
         <button class="nav-btn" data-tab="digest-tab">📑 Daily Market Digest</button>
         <button class="nav-btn" data-tab="calculator-tab">💰 FHB Cash-to-Close</button>
         <button class="nav-btn" data-tab="guide-tab">🛡️ Due Diligence Guide</button>
       </nav>
 
-      <div class="nav-stats" id="nav-meta-stats">
-        <span class="status-badge live">● LIVE</span>
-        <span class="meta-pill" id="stat-active-count">Loading...</span>
-        <span class="meta-pill" id="stat-model-acc">AVM R²: --</span>
+      <div class="nav-actions">
+        <button id="theme-toggle-btn" class="theme-toggle-btn" title="Toggle between Light and Dark mode">
+          <span class="theme-icon">🌙</span> <span class="theme-label">Dark Mode</span>
+        </button>
+        <div class="nav-stats" id="nav-meta-stats">
+          <span class="status-badge live">● LIVE</span>
+          <span class="meta-pill" id="stat-active-count">Loading...</span>
+          <span class="meta-pill" id="stat-model-acc">AVM R²: --</span>
+        </div>
       </div>
     </header>
 
@@ -45,7 +50,13 @@
       <!-- TAB 1: INTERACTIVE TRACKER -->
       <section id="tracker-tab" class="tab-pane active">
         <!-- Filter Controls Bar -->
-        <aside class="controls-bar">
+        <aside class="controls-bar" aria-label="Search and Filters">
+          
+          <div class="filter-group search-group">
+            <label for="search-input">Search Property / Suburb</label>
+            <input type="text" id="search-input" placeholder="e.g. Richmond, Collins St, Glenroy...">
+          </div>
+
           <div class="filter-group">
             <label for="suburb-filter">Suburb</label>
             <select id="suburb-filter">
@@ -56,7 +67,7 @@
           <div class="filter-group">
             <label for="agency-filter">Agency Network</label>
             <select id="agency-filter">
-              <option value="ALL">All Agencies</option>
+              <option value="ALL">All Agency Networks</option>
               <option value="Barry Plant">Barry Plant</option>
               <option value="Ray White">Ray White</option>
               <option value="View.com.au">View.com.au</option>
@@ -78,11 +89,11 @@
           <div class="filter-group">
             <label for="risk-filter">Underquoting Risk</label>
             <select id="risk-filter">
-              <option value="ALL">All Risk Levels</option>
-              <option value="Distressed / Urgent Seller Deal">💎 Motivated / Price Cut Deals</option>
-              <option value="Low Risk (Accurate Guide)">🟢 Low Risk (Honest Guide)</option>
-              <option value="Moderate Underquoting Risk">🟠 Moderate Risk (5-11% Gap)</option>
-              <option value="High Underquoting Risk">🔴 High Risk / Auction Bait (>11%)</option>
+              <option value="ALL">All Pricing Statuses</option>
+              <option value="Distressed / Urgent Seller Deal">💎 Motivated / Price-Cut Deals</option>
+              <option value="Low Risk (Accurate Guide)">🟢 Honest / Transparent Guides</option>
+              <option value="Moderate Underquoting Risk">🟠 Moderate Gap (+5% to +11%)</option>
+              <option value="High Underquoting Risk">🔴 Severe Auction Bait (>+11%)</option>
             </select>
           </div>
 
@@ -111,19 +122,19 @@
           </div>
 
           <div class="filter-group flag-filter-group">
-            <label for="flag-filter">Defect / Due Diligence</label>
+            <label for="flag-filter">Due Diligence Flag</label>
             <select id="flag-filter">
               <option value="ALL">All Properties</option>
               <option value="CLEAN">✅ Clean Profiles Only</option>
               <option value="WINDOWLESS">Windowless Room Risk</option>
               <option value="CLADDING">High OC / Cladding Risk</option>
-              <option value="MAIN_ROAD">Main Road Traffic Noise</option>
-              <option value="BANK_RESTRICTED">Undersized (<50sqm)</option>
+              <option value="MAIN_ROAD">Main Road Traffic Corridor</option>
+              <option value="BANK_RESTRICTED">Undersized (<50sqm LVR Cap)</option>
             </select>
           </div>
 
           <div class="filter-actions">
-            <button id="reset-filters-btn" class="secondary-btn">Reset Filters</button>
+            <button id="reset-filters-btn" class="secondary-btn" title="Reset all search filters">Reset Filters</button>
           </div>
         </aside>
 
@@ -133,9 +144,9 @@
           <div class="map-container">
             <div id="map"></div>
             <div class="map-legend">
-              <span class="legend-item"><span class="legend-dot cyan"></span> Distressed Deal</span>
+              <span class="legend-item"><span class="legend-dot cyan"></span> Motivated Deal</span>
               <span class="legend-item"><span class="legend-dot green"></span> Honest Guide</span>
-              <span class="legend-item"><span class="legend-dot orange"></span> Moderate (+5-11%)</span>
+              <span class="legend-item"><span class="legend-dot orange"></span> Moderate Gap (+5-11%)</span>
               <span class="legend-item"><span class="legend-dot red"></span> Auction Bait (>11%)</span>
             </div>
           </div>
@@ -145,13 +156,13 @@
             <div class="listings-header">
               <div class="listings-count">Showing <span id="filtered-count">0</span> matching properties</div>
               <div class="sort-selector">
-                <label for="sort-by">Sort:</label>
+                <label for="sort-by">Sort by:</label>
                 <select id="sort-by">
-                  <option value="risk-desc">Highest Underquoting Gap</option>
+                  <option value="risk-desc">Highest Underquoting Gap First</option>
                   <option value="price-asc">Lowest Price First</option>
                   <option value="price-desc">Highest Price First</option>
-                  <option value="avm-desc">Highest AVM Fair Value</option>
-                  <option value="c2c-asc">Lowest Cash-to-Close</option>
+                  <option value="avm-desc">Highest AVM Market Value</option>
+                  <option value="c2c-asc">Lowest Cash-to-Close Required</option>
                 </select>
               </div>
             </div>
@@ -166,9 +177,14 @@
       <!-- TAB 2: DAILY MARKET DIGEST -->
       <section id="digest-tab" class="tab-pane">
         <div class="digest-view">
-          <div class="digest-controls">
-            <h2>📑 Melbourne Daily Real Estate Intelligence Digest</h2>
-            <p class="subtitle">Scraped and generated automatically at 8:00 AM AEDT every morning via GitHub Actions.</p>
+          <div class="digest-header-card">
+            <div class="digest-header-text">
+              <h2>📑 Melbourne Daily Real Estate Intelligence Digest</h2>
+              <p class="subtitle">Scraped, scored, and generated daily at 8:00 AM AEDT across Greater Melbourne.</p>
+            </div>
+            <div class="digest-stats-strip" id="digest-stats-strip">
+              <!-- Filled dynamically with key metrics -->
+            </div>
           </div>
           <div id="digest-content" class="markdown-body">
             <p>Loading daily digest report...</p>
@@ -181,30 +197,32 @@
         <div class="calc-view-container">
           <div class="calc-card">
             <h2>💰 Victorian First-Home Buyer Cash-to-Close Calculator</h2>
-            <p class="subtitle">Calculate official SRO progressive stamp duty, FHB concessions, and 5% Federal First Home Guarantee deposits.</p>
+            <p class="subtitle">Calculate official State Revenue Office (SRO) progressive land transfer duty, FHB concessions, and 5% Federal First Home Guarantee deposits.</p>
 
             <div class="calc-inputs">
               <div class="calc-field">
                 <label for="calc-price-input">Property Purchase Price ($ AUD)</label>
                 <input type="number" id="calc-price-input" min="200000" max="3000000" step="5000" value="780000">
+                <span class="field-hint">e.g. $600,000 is 100% stamp duty free for FHBs</span>
               </div>
 
               <div class="calc-field">
-                <label for="calc-savings-input">Your Available Savings ($ AUD)</label>
+                <label for="calc-savings-input">Your Available Savings / Capital ($ AUD)</label>
                 <input type="number" id="calc-savings-input" min="10000" max="1000000" step="5000" value="95000">
+                <span class="field-hint">Upfront deposit and closing costs cash available</span>
               </div>
 
               <div class="calc-field-row">
                 <label class="checkbox-label">
                   <input type="checkbox" id="calc-fhb-check" checked>
-                  I am a First-Home Buyer (Eligible for SRO Exemption/Concession)
+                  <span><strong>I am a First-Home Buyer</strong> (Eligible for SRO Exemption up to $600k & Concession to $750k)</span>
                 </label>
               </div>
 
               <div class="calc-field-row">
                 <label class="checkbox-label">
                   <input type="checkbox" id="calc-fhg-check" checked>
-                  Apply Federal First Home Guarantee (5% deposit, $0 LMI under $950k)
+                  <span><strong>Apply Federal First Home Guarantee (FHG)</strong> (5% low-deposit scheme with $0 LMI under $950k Melbourne cap)</span>
                 </label>
               </div>
             </div>
@@ -221,31 +239,43 @@
         <div class="guide-view-container">
           <div class="guide-content">
             <h2>🛡️ Melbourne Property Buyer Due Diligence Guide</h2>
-            <p class="lead">Essential guidance for navigating underquoting traps, building defects, and Victorian contracts.</p>
+            <p class="lead">Essential guidance for identifying underquoting traps, hidden building defects, and bank mortgage lending limits across Greater Melbourne.</p>
 
             <div class="guide-grid">
               <article class="guide-card">
-                <div class="guide-icon">⚠️</div>
-                <h3>1. How Victorian Underquoting Works</h3>
-                <p>Under the <em>Estate Agents Act 1980</em>, an agent's Statement of Information (SOI) must list an indicative selling price and 3 recent comparable sales. However, agents often deliberately quote the bottom 10% of their vendor's reserve to manufacture auction competition. If the AVM Fair Value sits >11% above the top guide, the listing is almost certainly auction bait.</p>
+                <div class="guide-icon-header">
+                  <div class="guide-icon">⚠️</div>
+                  <h3>1. How Victorian Underquoting Works</h3>
+                </div>
+                <p>Under the Victorian <em>Estate Agents Act 1980</em>, agents must publish a Statement of Information (SOI) with an indicative selling guide and 3 comparable sales. However, agents routinely quote the bottom 10% of the vendor's reserve to artificially drive auction crowds. When the AVM Fair Value sits >11% above the upper guide, treat the property as auction bait and budget for the true market value.</p>
+                <div class="guide-tip"><strong>Buyer Action:</strong> Never pay for a building inspection or contract review until verifying comparable settled sales within 2 km.</div>
               </article>
 
               <article class="guide-card">
-                <div class="guide-icon">🚪</div>
-                <h3>2. Inboard / Windowless 2nd Bedrooms</h3>
-                <p>Prior to Victoria's 2017 <em>Better Apartments Design Standards (BADS)</em>, developers built apartments where the 2nd bedroom had no external window, using "borrowed light" through frosted sliding glass or internal corridors. These suffer poor ventilation, lower resale liquidity, and bank valuation discounts.</p>
+                <div class="guide-icon-header">
+                  <div class="guide-icon">🚪</div>
+                  <h3>2. Inboard / Windowless 2nd Bedrooms</h3>
+                </div>
+                <p>Prior to Victoria's 2017 <em>Better Apartments Design Standards (BADS)</em>, developers constructed thousands of CBD and Docklands units where second bedrooms lacked external windows, using "borrowed light" via frosted glass dividers. These suffer poor airflow, lower rental appeal, and bank valuation haircuts.</p>
+                <div class="guide-tip"><strong>Buyer Action:</strong> Check floorplans carefully. Every habitable bedroom should have direct perimeter glazing to the open sky.</div>
               </article>
 
               <article class="guide-card">
-                <div class="guide-icon">🏢</div>
-                <h3>3. Combustible Cladding & Owners Corp Levies</h3>
-                <p>High-rise precincts in Docklands, Southbank, and Melbourne CBD frequently carry special levies for flammable aluminum composite cladding rectification. Always check Section 32 Owners Corporation certificates for special levies, sinking fund balances, and annual fees exceeding $6,000/year.</p>
+                <div class="guide-icon-header">
+                  <div class="guide-icon">🏢</div>
+                  <h3>3. Combustible Cladding & Owners Corp Levies</h3>
+                </div>
+                <p>High-rise precincts in Docklands, Southbank, and Melbourne CBD frequently carry special levies for flammable aluminum composite cladding rectification. Always check Section 32 Owners Corporation certificates for pending cladding notices, sinking fund balances, and annual fees exceeding $6,000/year.</p>
+                <div class="guide-tip"><strong>Buyer Action:</strong> Inspect Section 32 OC certificates for special levies or active Cladding Safety Victoria (CSV) disputes.</div>
               </article>
 
               <article class="guide-card">
-                <div class="guide-icon">📏</div>
-                <h3>4. The 50 sqm Bank Lending Threshold</h3>
+                <div class="guide-icon-header">
+                  <div class="guide-icon">📏</div>
+                  <h3>4. The 50 sqm Bank Lending Threshold</h3>
+                </div>
                 <p>Most major Australian banks require an internal floor area of at least <strong>50 square meters</strong> (excluding balconies and car spaces) to approve a standard 5% to 10% loan-to-value ratio (LVR). Properties under 50 sqm often require a 20%+ deposit and are strictly excluded from the Federal 5% deposit scheme.</p>
+                <div class="guide-tip"><strong>Buyer Action:</strong> Request architectural strata plans to confirm internal living dimensions before bidding on studio or compact 1-beds.</div>
               </article>
             </div>
           </div>
@@ -255,14 +285,14 @@
     </main>
 
     <!-- Comparable Sales Modal -->
-    <div id="comps-modal" class="modal-backdrop hidden">
+    <div id="comps-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
       <div class="modal-card">
         <div class="modal-header">
           <div>
             <h3 id="comps-modal-title">Nearby Comparable Settled Sales</h3>
-            <p id="comps-modal-subtitle" class="subtitle">Historical Valuer-General Victoria settled sales</p>
+            <p id="comps-modal-subtitle" class="subtitle">Historical Valuer-General Victoria settled transactions</p>
           </div>
-          <button class="modal-close-btn" id="comps-close-btn">&times;</button>
+          <button class="modal-close-btn" id="comps-close-btn" aria-label="Close modal">&times;</button>
         </div>
         <div class="modal-body" id="comps-modal-body">
           <!-- Filled dynamically -->
@@ -271,14 +301,14 @@
     </div>
 
     <!-- Cash to Close Detail Modal -->
-    <div id="c2c-modal" class="modal-backdrop hidden">
+    <div id="c2c-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
       <div class="modal-card">
         <div class="modal-header">
           <div>
             <h3 id="c2c-modal-title">Cash-to-Close Breakdown</h3>
             <p id="c2c-modal-subtitle" class="subtitle">Exact upfront capital required to purchase</p>
           </div>
-          <button class="modal-close-btn" id="c2c-close-btn">&times;</button>
+          <button class="modal-close-btn" id="c2c-close-btn" aria-label="Close modal">&times;</button>
         </div>
         <div class="modal-body" id="c2c-modal-body">
           <!-- Filled dynamically -->
@@ -288,12 +318,12 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <div>Melbourne Property Tracker &bull; Open-Source Real Estate Valuation & Due Diligence &bull; Automated with GitHub Actions</div>
-      <div class="footer-note">Data sources: Barry Plant, Ray White, View.com.au, Valuer-General Victoria, State Revenue Office VIC.</div>
+      <div><strong>Melbourne Property Tracker</strong> &bull; Open-Source Valuation & Due Diligence &bull; Automated with GitHub Actions</div>
+      <div class="footer-note">Data sources: Barry Plant, Ray White, View.com.au, Valuer-General Victoria, State Revenue Office Victoria.</div>
     </footer>
   </div>
 
-  <!-- Scripts: Leaflet JS & App JS -->
+  <!-- Leaflet JS & App JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="app.js"></script>
 </body>

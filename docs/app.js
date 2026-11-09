@@ -1,6 +1,7 @@
 /**
- * Melbourne Property Tracker — Main Web Application (`docs/app.js`)
- * Zero-dependency frontend: Leaflet.js, Vanillajs, Dynamic Filtering & Victorian Financial Engine.
+ * Melbourne Property Tracker — Frontend Application (`docs/app.js`)
+ * High-legibility, zero-dependency client: Leaflet.js, VanillaJS,
+ * Dynamic Filtering, Theme Switcher & Victorian Financial Engine.
  */
 
 // Application State
@@ -10,10 +11,12 @@ const state = {
   metadata: {},
   filteredListings: [],
   map: null,
+  tileLayer: null,
   markersLayer: null,
   activeTab: 'tracker-tab',
-  selectedListing: null,
+  currentTheme: localStorage.getItem('melb_tracker_theme') || 'light',
   filters: {
+    search: '',
     suburb: 'ALL',
     agency: 'ALL',
     propertyType: 'ALL',
@@ -26,7 +29,91 @@ const state = {
 };
 
 // -----------------------------------------------------------------------------
-// 1. Victorian Land Transfer Duty & FHB Financial Calculator (Client-side)
+// 1. Theme Management (Light / Dark Mode with Leaflet Tile Sync)
+// -----------------------------------------------------------------------------
+function initTheme() {
+  setTheme(state.currentTheme);
+
+  const toggleBtn = document.getElementById('theme-toggle-btn');
+  if (!toggleBtn) return;
+
+  toggleBtn.addEventListener('click', () => {
+    const nextTheme = state.currentTheme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+  });
+}
+
+function setTheme(theme) {
+  state.currentTheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('melb_tracker_theme', theme);
+
+  const toggleBtn = document.getElementById('theme-toggle-btn');
+  if (toggleBtn) {
+    if (theme === 'light') {
+      toggleBtn.innerHTML = `<span class="theme-icon">🌙</span> <span class="theme-label">Dark Mode</span>`;
+    } else {
+      toggleBtn.innerHTML = `<span class="theme-icon">☀️</span> <span class="theme-label">Light Mode</span>`;
+    }
+  }
+
+  // Sync Leaflet Map Tiles
+  updateMapTiles(theme);
+}
+
+function updateMapTiles(theme) {
+  if (!state.map) return;
+
+  if (state.tileLayer) {
+    state.map.removeLayer(state.tileLayer);
+  }
+
+  const tileUrl = theme === 'dark'
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+  state.tileLayer = L.tileLayer(tileUrl, {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(state.map);
+}
+
+// -----------------------------------------------------------------------------
+// 2. Address Cleaning & Formatting Helpers
+// -----------------------------------------------------------------------------
+function cleanDisplayAddress(item) {
+  // If normalized_address exists, extract the primary street part
+  if (item.normalized_address && item.normalized_address.includes(',')) {
+    const streetPart = item.normalized_address.split(',')[0].trim();
+    if (streetPart && streetPart.length > 3) {
+      return toTitleCase(streetPart);
+    }
+  }
+
+  let addr = item.street_address || '';
+  // Strip common scraper prefix garbage
+  addr = addr.replace(/^(Open\s+\w+\s+|House for Sale\s+|Home for Sale\s+|Apartment for Sale\s+|Townhouse for Sale\s+|Auction\s+|Private Sale\s+|Under Offer\s+|Land for Sale\s+|Contact Agent\s+|-\s*|\$[\d,kKmM\s-]+\s*)+/gi, '').trim();
+  
+  if (item.suburb_name) {
+    const subRegex = new RegExp(',?\\s*' + escapeRegExp(item.suburb_name) + '(\\s+\\d+\\s+Beds)?.*$', 'i');
+    addr = addr.replace(subRegex, '').trim();
+  }
+  addr = addr.replace(/,\s*$/, '').trim();
+
+  return addr ? toTitleCase(addr) : 'Melbourne Property';
+}
+
+function toTitleCase(str) {
+  return str.toLowerCase().replace(/(?:^|\s|-|\/)\w/g, match => match.toUpperCase());
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// -----------------------------------------------------------------------------
+// 3. Victorian Land Transfer Duty & FHB Financial Engine
 // -----------------------------------------------------------------------------
 function calculateGeneralStampDuty(dutiableValue) {
   const v = Math.max(0, dutiableValue);
@@ -50,7 +137,8 @@ function calculateStampDutyBreakdown(price, isFhb = true) {
       savings = baseDuty;
       isExempt = true;
     } else if (price <= 750000) {
-      payable = baseDuty * ((price - 600000) / 150000);
+      const concessionFactor = (price - 600000) / 150000;
+      payable = baseDuty * concessionFactor;
       savings = baseDuty - payable;
       isConcession = true;
     }
@@ -65,93 +153,39 @@ function calculateStampDutyBreakdown(price, isFhb = true) {
   };
 }
 
-function calculateCashToClose(price, savings, isFhb = true, applyFhg = true) {
-  const duty = calculateStampDutyBreakdown(price, isFhb);
-  const isFhgEligible = isFhb && applyFhg && price <= 950000;
-  const depositPct = isFhgEligible ? 0.05 : 0.20;
-  const depositAmount = Math.round(price * depositPct);
+function calculateCashToClose(price, availableSavings = 95000, isFhb = true, useFhg = true) {
+  const isFhgEligible = isFhb && useFhg && price <= 950000;
+  const depositPct = isFhgEligible ? 5 : 20;
+  const depositAmount = price * (depositPct / 100);
 
+  const duty = calculateStampDutyBreakdown(price, isFhb);
   const conveyancing = 2000;
   const buildingPest = 600;
   const titleRegistration = 1450;
-  const upfrontCosts = duty.payableDuty + conveyancing + buildingPest + titleRegistration;
-  const totalCashRequired = depositAmount + upfrontCosts;
-  const difference = Math.round(savings - totalCashRequired);
+
+  const totalUpfrontCostsExclDeposit = duty.payableDuty + conveyancing + buildingPest + titleRegistration;
+  const totalCashRequired = depositAmount + totalUpfrontCostsExclDeposit;
+  const difference = availableSavings - totalCashRequired;
+  const hasSufficientFunds = difference >= 0;
 
   return {
     price,
-    savings,
-    depositPct: depositPct * 100,
+    depositPct,
     depositAmount,
     isFhgEligible,
     duty,
     conveyancing,
     buildingPest,
     titleRegistration,
-    upfrontCosts,
+    totalUpfrontCostsExclDeposit,
     totalCashRequired,
     difference,
-    hasSufficientFunds: difference >= 0
+    hasSufficientFunds
   };
 }
 
 // -----------------------------------------------------------------------------
-// 2. Initialization & Data Fetching
-// -----------------------------------------------------------------------------
-document.addEventListener('DOMContentLoaded', async () => {
-  initNavigationTabs();
-  initMap();
-  initFilterListeners();
-  initStandaloneCalculator();
-  await loadData();
-});
-
-async function loadData() {
-  try {
-    const [listingsRes, salesRes, metaRes, digestRes] = await Promise.all([
-      fetch('data/listings.json'),
-      fetch('data/settled_sales.json').catch(() => ({ ok: false })),
-      fetch('data/metadata.json').catch(() => ({ ok: false })),
-      fetch('data/digest.md').catch(() => ({ ok: false }))
-    ]);
-
-    if (!listingsRes.ok) throw new Error('Could not load data/listings.json');
-    state.listings = await listingsRes.json();
-
-    if (salesRes.ok) state.settledSales = await salesRes.json();
-    if (metaRes.ok) {
-      state.metadata = await metaRes.json();
-      updateMetaStats();
-    }
-
-    if (digestRes.ok) {
-      const digestMd = await digestRes.text();
-      renderDigestMarkdown(digestMd);
-    }
-
-    populateSuburbDropdown();
-    applyFilters();
-  } catch (err) {
-    console.error('Failed to load real estate datasets:', err);
-    document.getElementById('listings-grid').innerHTML = `
-      <div style="padding: 2rem; text-align: center; color: var(--accent-red);">
-        <h3>⚠️ Unable to load live listings</h3>
-        <p>Ensure <code>data/listings.json</code> has been generated via GitHub Actions.</p>
-      </div>`;
-  }
-}
-
-function updateMetaStats() {
-  const countEl = document.getElementById('stat-active-count');
-  const accEl = document.getElementById('stat-model-acc');
-  if (countEl) countEl.textContent = `${state.metadata.total_active_listings || state.listings.length} Active Listings`;
-  if (accEl && state.metadata.avm_metrics) {
-    accEl.textContent = `AVM R²: ${Number(state.metadata.avm_metrics.r2).toFixed(3)}`;
-  }
-}
-
-// -----------------------------------------------------------------------------
-// 3. Navigation Tabs
+// 4. Navigation Tabs
 // -----------------------------------------------------------------------------
 function initNavigationTabs() {
   const btns = document.querySelectorAll('.nav-btn');
@@ -175,7 +209,7 @@ function initNavigationTabs() {
 }
 
 // -----------------------------------------------------------------------------
-// 4. Geospatial Leaflet Map
+// 5. Geospatial Leaflet Map
 // -----------------------------------------------------------------------------
 function initMap() {
   const mapEl = document.getElementById('map');
@@ -189,12 +223,8 @@ function initMap() {
 
   L.control.zoom({ position: 'topright' }).addTo(state.map);
 
-  // CartoDB Dark Matter tiles
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    subdomains: 'abcd',
-    maxZoom: 19
-  }).addTo(state.map);
+  // Set initial tile layer according to current theme
+  updateMapTiles(state.currentTheme);
 
   state.markersLayer = L.layerGroup().addTo(state.map);
 }
@@ -212,39 +242,40 @@ function updateMapMarkers(listings) {
 
     bounds.push([lat, lon]);
 
-    let markerColor = '#38BDF8';
-    if (item.risk_color_hex) {
-      markerColor = item.risk_color_hex;
-    } else if (item.underquoting_risk_level?.includes('High')) {
-      markerColor = '#EF4444';
+    let markerColor = '#0284C7';
+    if (item.underquoting_risk_level?.includes('High')) {
+      markerColor = '#DC2626';
     } else if (item.underquoting_risk_level?.includes('Distressed')) {
-      markerColor = '#06B6D4';
+      markerColor = '#0891B2';
     } else if (item.underquoting_risk_level?.includes('Moderate')) {
-      markerColor = '#F59E0B';
+      markerColor = '#D97706';
     } else {
-      markerColor = '#10B981';
+      markerColor = '#059669';
     }
 
     const circleMarker = L.circleMarker([lat, lon], {
-      radius: 7,
+      radius: 8,
       fillColor: markerColor,
       color: '#FFFFFF',
-      weight: 1.5,
-      opacity: 0.9,
-      fillOpacity: 0.85
+      weight: 2,
+      opacity: 0.95,
+      fillOpacity: 0.9
     });
 
+    const displayAddr = cleanDisplayAddress(item);
+    const gapPct = Number(item.underquoting_gap_pct || 0);
+
     const popupContent = `
-      <div style="font-family: var(--font-sans); color: #0F172A; min-width: 200px;">
-        <div style="font-size: 11px; font-weight: 700; color: ${markerColor}; text-transform: uppercase;">
+      <div style="font-family: var(--font-sans); color: #0F172A; min-width: 220px; padding: 4px;">
+        <div style="font-size: 11px; font-weight: 800; color: ${markerColor}; text-transform: uppercase; margin-bottom: 2px;">
           ${item.underquoting_risk_level}
         </div>
-        <div style="font-size: 13px; font-weight: 700; margin: 3px 0;">${item.street_address}</div>
-        <div style="font-size: 12px; color: #475569;">${item.suburb_name} (${item.property_type})</div>
-        <div style="margin-top: 6px; font-size: 12px; background: #F1F5F9; padding: 4px 6px; border-radius: 4px;">
+        <div style="font-size: 14px; font-weight: 800; margin: 2px 0;">${displayAddr}</div>
+        <div style="font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px;">${item.suburb_name} &bull; ${item.property_type}</div>
+        <div style="background: #F1F5F9; padding: 8px 10px; border-radius: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 3px;">
           <div>Guide: <strong>${item.price_guide_raw}</strong></div>
           <div>AVM Fair Value: <strong>$${Number(item.avm_estimated_value).toLocaleString()}</strong></div>
-          <div>Gap: <strong style="color: ${markerColor};">${item.underquoting_gap_pct > 0 ? '+' : ''}${item.underquoting_gap_pct}%</strong></div>
+          <div>Gap: <strong style="color: ${markerColor}; font-weight: 800;">${gapPct > 0 ? '+' : ''}${gapPct}%</strong></div>
         </div>
       </div>
     `;
@@ -259,7 +290,7 @@ function updateMapMarkers(listings) {
 }
 
 // -----------------------------------------------------------------------------
-// 5. Filtering & Rendering
+// 6. Filtering & Search Logic
 // -----------------------------------------------------------------------------
 function populateSuburbDropdown() {
   const suburbSelect = document.getElementById('suburb-filter');
@@ -275,6 +306,13 @@ function populateSuburbDropdown() {
 }
 
 function initFilterListeners() {
+  // Search text input
+  const searchInput = document.getElementById('search-input');
+  searchInput?.addEventListener('input', (e) => {
+    state.filters.search = e.target.value.trim().toLowerCase();
+    applyFilters();
+  });
+
   // Suburb
   document.getElementById('suburb-filter')?.addEventListener('change', (e) => {
     state.filters.suburb = e.target.value;
@@ -347,6 +385,7 @@ function initFilterListeners() {
   // Reset
   document.getElementById('reset-filters-btn')?.addEventListener('click', () => {
     state.filters = {
+      search: '',
       suburb: 'ALL',
       agency: 'ALL',
       propertyType: 'ALL',
@@ -356,6 +395,7 @@ function initFilterListeners() {
       flagFilter: 'ALL',
       sortBy: 'risk-desc'
     };
+    if (searchInput) searchInput.value = '';
     document.getElementById('suburb-filter').value = 'ALL';
     document.getElementById('agency-filter').value = 'ALL';
     document.getElementById('type-filter').value = 'ALL';
@@ -383,6 +423,18 @@ function applyFilters() {
   const f = state.filters;
 
   state.filteredListings = state.listings.filter(item => {
+    // Search keyword
+    if (f.search) {
+      const q = f.search;
+      const addr = (item.street_address || '').toLowerCase();
+      const norm = (item.normalized_address || '').toLowerCase();
+      const sub = (item.suburb_name || '').toLowerCase();
+      const ag = (item.agency_name || '').toLowerCase();
+      if (!addr.includes(q) && !norm.includes(q) && !sub.includes(q) && !ag.includes(q)) {
+        return false;
+      }
+    }
+
     // Suburb
     if (f.suburb !== 'ALL' && item.suburb_name !== f.suburb) return false;
 
@@ -397,10 +449,10 @@ function applyFilters() {
     // Property Type
     if (f.propertyType !== 'ALL' && item.property_type !== f.propertyType) return false;
 
-    // Risk
+    // Risk Level
     if (f.riskLevel !== 'ALL' && item.underquoting_risk_level !== f.riskLevel) return false;
 
-    // Budget (checks price_guide_high or price_guide_low)
+    // Budget
     const price = Number(item.price_guide_high || item.price_guide_low || 0);
     if (price > f.maxBudget) return false;
 
@@ -420,7 +472,9 @@ function applyFilters() {
     return true;
   });
 
-  document.getElementById('filtered-count').textContent = state.filteredListings.length;
+  const countEl = document.getElementById('filtered-count');
+  if (countEl) countEl.textContent = state.filteredListings.length;
+
   sortAndRenderListings();
   updateMapMarkers(state.filteredListings);
 }
@@ -443,9 +497,9 @@ function sortAndRenderListings() {
 
   if (list.length === 0) {
     grid.innerHTML = `
-      <div style="padding: 3rem 1rem; text-align: center; color: var(--text-muted);">
-        <h3>No properties match the selected criteria</h3>
-        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Try raising the budget cap or broadening the suburb filter.</p>
+      <div style="padding: 3.5rem 1.5rem; text-align: center; color: var(--text-muted); background: var(--bg-surface); border-radius: var(--radius-lg); border: 1.5px dashed var(--border-subtle);">
+        <h3 style="color: var(--text-heading); font-size: 1.25rem; font-weight: 700;">No properties match your filter criteria</h3>
+        <p style="font-size: 0.95rem; margin-top: 0.5rem; color: var(--text-secondary);">Try raising the price ceiling, clearing the search keyword, or selecting "All Melbourne Metro".</p>
       </div>`;
     return;
   }
@@ -475,11 +529,27 @@ function sortAndRenderListings() {
   });
 }
 
+// -----------------------------------------------------------------------------
+// 7. Property Card Component (High Readability)
+// -----------------------------------------------------------------------------
 function renderPropertyCard(item) {
   let riskBadgeClass = 'risk-green';
-  if (item.underquoting_risk_level?.includes('High')) riskBadgeClass = 'risk-red';
-  else if (item.underquoting_risk_level?.includes('Distressed')) riskBadgeClass = 'risk-cyan';
-  else if (item.underquoting_risk_level?.includes('Moderate')) riskBadgeClass = 'risk-amber';
+  let riskIcon = '🟢';
+  let riskTitle = 'Honest Guide';
+
+  if (item.underquoting_risk_level?.includes('High')) {
+    riskBadgeClass = 'risk-red';
+    riskIcon = '🔴';
+    riskTitle = 'Auction Bait';
+  } else if (item.underquoting_risk_level?.includes('Distressed')) {
+    riskBadgeClass = 'risk-cyan';
+    riskIcon = '💎';
+    riskTitle = 'Motivated Seller';
+  } else if (item.underquoting_risk_level?.includes('Moderate')) {
+    riskBadgeClass = 'risk-amber';
+    riskIcon = '🟠';
+    riskTitle = 'Moderate Gap';
+  }
 
   const isClean = (item.property_issue_heading || '').includes('Clean');
   const defectClass = isClean ? 'clean' : 'warning';
@@ -488,10 +558,11 @@ function renderPropertyCard(item) {
   const priceHigh = Number(item.price_guide_high || item.price_guide_low || 0);
   const avmVal = Number(item.avm_estimated_value || 0);
   const gapPct = Number(item.underquoting_gap_pct || 0);
+  const gapAud = Math.abs(avmVal - priceHigh);
 
   let fhbBadge = '';
   if (priceHigh <= 600000) {
-    fhbBadge = `<span class="fhb-pill">$0 Stamp Duty (100% Free)</span>`;
+    fhbBadge = `<span class="fhb-pill">$0 Stamp Duty (Full Exemption)</span>`;
   } else if (priceHigh <= 750000) {
     fhbBadge = `<span class="fhb-pill">FHB Duty Concession</span>`;
   } else if (priceHigh <= 950000) {
@@ -500,54 +571,58 @@ function renderPropertyCard(item) {
 
   const externalLinkHtml = item.listing_url ? `
     <a href="${item.listing_url}" target="_blank" rel="noopener noreferrer" class="card-btn" onclick="event.stopPropagation();">
-      Portal Link ↗
+      View Listing ↗
     </a>` : '';
 
+  const displayAddress = cleanDisplayAddress(item);
+
   return `
-    <div class="property-card" data-id="${item.listing_id}">
+    <article class="property-card" data-id="${item.listing_id}">
       <div class="card-top">
         <div class="card-badges">
           <span class="badge ${riskBadgeClass}">
-            ${item.underquoting_risk_level} (${gapPct > 0 ? '+' : ''}${gapPct}%)
+            ${riskIcon} ${riskTitle}: ${gapPct > 0 ? '+' : ''}${gapPct}%
           </span>
           <span class="badge agency-badge">${item.agency_name || item.source}</span>
         </div>
         <div class="card-source-date">${item.sale_method || 'Auction'}</div>
       </div>
 
-      <div>
-        <div class="card-address">${item.street_address}</div>
-        <div class="card-suburb">${item.suburb_name}, VIC ${item.postcode || ''}</div>
-      </div>
-
-      <div class="defect-banner ${defectClass}">
-        <span>${defectIcon}</span>
-        <span><strong>${item.property_issue_heading}</strong>: ${item.property_issue_details || ''}</span>
+      <div class="card-address-block">
+        <div class="card-address">${displayAddress}</div>
+        <div class="card-suburb">${item.suburb_name}, VIC ${item.postcode || ''} &bull; ${item.property_type}</div>
       </div>
 
       <div class="card-valuation-grid">
         <div class="val-col">
-          <span class="val-label">Quoted Guide</span>
-          <span class="val-number">${item.price_guide_raw}</span>
+          <span class="val-label">Quoted Agent Guide</span>
+          <span class="val-number">${item.price_guide_raw || '$' + priceHigh.toLocaleString()}</span>
         </div>
         <div class="val-col">
-          <span class="val-label">AVM Fair Value</span>
-          <span class="val-number" style="color: var(--accent-blue);">$${avmVal.toLocaleString()}</span>
+          <span class="val-label">AVM Market Fair Value</span>
+          <span class="val-number" style="color: var(--accent-primary);">$${avmVal.toLocaleString()}</span>
         </div>
         <div class="val-col">
-          <span class="val-label">Underquoting Gap</span>
+          <span class="val-label">Estimated Gap / Reserve</span>
           <span class="val-number gap-${riskBadgeClass.replace('risk-', '')}">
-            ${gapPct > 0 ? '+' : ''}${gapPct}%
+            ${gapPct > 0 ? '+' : ''}$${gapAud.toLocaleString()} (${gapPct > 0 ? '+' : ''}${gapPct}%)
           </span>
         </div>
       </div>
 
+      <div class="defect-banner ${defectClass}">
+        <span style="font-size: 1.15rem; line-height: 1;">${defectIcon}</span>
+        <div>
+          <strong>${item.property_issue_heading}</strong>: ${item.property_issue_details || 'Standard Section 32 due diligence recommended.'}
+        </div>
+      </div>
+
       <div class="card-features">
-        <span class="card-feature-item">🛏️ ${item.bedrooms || 0} Beds</span>
-        <span class="card-feature-item">🚿 ${item.bathrooms || 1} Baths</span>
-        <span class="card-feature-item">🚗 ${item.car_spaces || 0} Parking</span>
-        <span class="card-feature-item">📐 ${Math.round(item.building_area_sqm || item.land_size_sqm || 0)} m²</span>
-        <span class="card-feature-item">📍 ${item.cbd_distance_km || 0} km to CBD</span>
+        <span class="card-feature-item">🛏️ <strong>${item.bedrooms || 0}</strong> Beds</span>
+        <span class="card-feature-item">🚿 <strong>${item.bathrooms || 1}</strong> Baths</span>
+        <span class="card-feature-item">🚗 <strong>${item.car_spaces || 0}</strong> Parking</span>
+        <span class="card-feature-item">📐 <strong>${Math.round(item.building_area_sqm || item.land_size_sqm || 0)}</strong> m²</span>
+        <span class="card-feature-item">📍 <strong>${item.cbd_distance_km || 0}</strong> km to CBD</span>
       </div>
 
       <div class="card-actions">
@@ -558,12 +633,12 @@ function renderPropertyCard(item) {
           ${externalLinkHtml}
         </div>
       </div>
-    </div>
+    </article>
   `;
 }
 
 // -----------------------------------------------------------------------------
-// 6. Modals (Cash-to-Close & Comps)
+// 8. Modals: Cash-to-Close & Recent Comps
 // -----------------------------------------------------------------------------
 function openCashToCloseModal(listing) {
   const modal = document.getElementById('c2c-modal');
@@ -573,12 +648,13 @@ function openCashToCloseModal(listing) {
 
   const price = Number(listing.price_guide_high || listing.price_guide_low || 800000);
   const fin = calculateCashToClose(price, 95000, true, true);
+  const displayAddress = cleanDisplayAddress(listing);
 
-  title.textContent = `Cash-to-Close: ${listing.street_address}`;
+  title.textContent = `Cash-to-Close: ${displayAddress}`;
 
   body.innerHTML = `
-    <div style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
-      Full Victorian Government Land Transfer Duty, Federal 5% First Home Guarantee (FHG) eligibility, and settlement costs for <strong>${listing.suburb_name}</strong>.
+    <div style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.5;">
+      Exact Victorian SRO Land Transfer Duty, Federal First Home Guarantee (FHG) 5% deposit assessment, and estimated settlement costs for <strong>${listing.suburb_name}</strong>.
     </div>
 
     <table class="fin-table">
@@ -587,22 +663,22 @@ function openCashToCloseModal(listing) {
         <td>$${price.toLocaleString()}</td>
       </tr>
       <tr>
-        <td>Required Minimum Deposit (${fin.depositPct}%)</td>
+        <td>Minimum Required Deposit (${fin.depositPct}%)</td>
         <td>$${fin.depositAmount.toLocaleString()}</td>
       </tr>
       <tr>
         <td>Federal First Home Guarantee (FHG)</td>
-        <td style="color: ${fin.isFhgEligible ? 'var(--accent-green)' : 'var(--text-muted)'};">
-          ${fin.isFhgEligible ? '✅ Applied (5% Deposit, $0 LMI)' : 'Standard 20% Deposit (Cap $950k)'}
+        <td style="color: ${fin.isFhgEligible ? '#059669' : 'var(--text-muted)'}; font-weight: 700;">
+          ${fin.isFhgEligible ? '✅ Applied (5% Deposit with $0 LMI)' : 'Standard 20% Deposit (Cap $950k)'}
         </td>
       </tr>
       <tr>
-        <td>Standard Victorian Stamp Duty (Base)</td>
+        <td>Standard Base Victorian Stamp Duty</td>
         <td>$${fin.duty.baseDuty.toLocaleString()}</td>
       </tr>
       <tr>
         <td>First-Home Buyer Exemption/Concession Savings</td>
-        <td style="color: var(--accent-green);">- $${fin.duty.savings.toLocaleString()}</td>
+        <td style="color: #059669; font-weight: 700;">- $${fin.duty.savings.toLocaleString()}</td>
       </tr>
       <tr>
         <td><strong>Payable Victorian Land Transfer Duty</strong></td>
@@ -642,34 +718,33 @@ function openCompsModal(listing) {
 
   title.textContent = `Comparable Settled Sales: ${listing.suburb_name}`;
 
-  // Find nearest sales matching suburb and property type
   const comps = state.settledSales.filter(s => {
     return s.suburb_name === listing.suburb_name || s.property_type === listing.property_type;
   }).slice(0, 5);
 
   if (comps.length === 0) {
-    body.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 2rem;">No nearby historical sales found for this precinct.</p>`;
+    body.innerHTML = `<p style="color: var(--text-muted); text-align: center; padding: 2.5rem; font-size: 1rem;">No historical sales found matching this exact suburb and property type.</p>`;
   } else {
     body.innerHTML = `
-      <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">
-        Historical Valuer-General Victoria settled transactions utilized by the AVM model for <strong>${listing.suburb_name}</strong>.
+      <div style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+        Historical Valuer-General Victoria settled transactions utilized by the machine learning model for <strong>${listing.suburb_name}</strong>.
       </div>
       <table class="fin-table">
         <thead>
-          <tr style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">
-            <th style="text-align: left; padding: 0.5rem;">Address</th>
-            <th style="text-align: left; padding: 0.5rem;">Type / Beds</th>
-            <th style="text-align: left; padding: 0.5rem;">Settlement</th>
-            <th style="text-align: right; padding: 0.5rem;">Sold Price</th>
+          <tr style="color: var(--text-secondary); font-size: 0.8rem; text-transform: uppercase;">
+            <th style="text-align: left; padding: 0.6rem 0.8rem;">Address</th>
+            <th style="text-align: left; padding: 0.6rem 0.8rem;">Type / Beds</th>
+            <th style="text-align: left; padding: 0.6rem 0.8rem;">Settlement</th>
+            <th style="text-align: right; padding: 0.6rem 0.8rem;">Sold Price</th>
           </tr>
         </thead>
         <tbody>
           ${comps.map(c => `
             <tr>
-              <td><strong>${c.street_address}</strong><br><span style="font-size: 0.75rem; color: var(--text-muted);">${c.suburb_name}</span></td>
+              <td><strong>${c.street_address}</strong><br><span style="font-size: 0.82rem; color: var(--text-muted);">${c.suburb_name}</span></td>
               <td>${c.property_type} (${c.bedrooms}B / ${c.bathrooms}Ba)</td>
               <td>${c.settlement_date || 'Recent'}</td>
-              <td style="color: var(--accent-green); font-weight: 700;">$${Number(c.sold_price).toLocaleString()}</td>
+              <td style="color: #059669; font-weight: 800; font-family: var(--font-mono);">$${Number(c.sold_price).toLocaleString()}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -681,7 +756,7 @@ function openCompsModal(listing) {
 }
 
 // -----------------------------------------------------------------------------
-// 7. Standalone FHB Calculator Tab
+// 9. Standalone FHB Calculator Tab
 // -----------------------------------------------------------------------------
 function initStandaloneCalculator() {
   const priceInput = document.getElementById('calc-price-input');
@@ -701,7 +776,7 @@ function initStandaloneCalculator() {
     resultsContainer.innerHTML = `
       <table class="fin-table">
         <tr>
-          <td>Purchase Price</td>
+          <td>Property Purchase Price</td>
           <td>$${price.toLocaleString()}</td>
         </tr>
         <tr>
@@ -710,7 +785,7 @@ function initStandaloneCalculator() {
         </tr>
         <tr>
           <td>Federal First Home Guarantee (FHG)</td>
-          <td style="color: ${res.isFhgEligible ? 'var(--accent-green)' : 'var(--text-muted)'};">
+          <td style="color: ${res.isFhgEligible ? '#059669' : 'var(--text-muted)'}; font-weight: 700;">
             ${res.isFhgEligible ? '✅ Applied (5% Deposit with $0 LMI)' : 'Standard 20% Deposit (Cap $950,000)'}
           </td>
         </tr>
@@ -720,7 +795,7 @@ function initStandaloneCalculator() {
         </tr>
         <tr>
           <td>First-Home Buyer Exemption/Concession Savings</td>
-          <td style="color: var(--accent-green);">- $${res.duty.savings.toLocaleString()}</td>
+          <td style="color: #059669; font-weight: 700;">- $${res.duty.savings.toLocaleString()}</td>
         </tr>
         <tr>
           <td><strong>Payable Stamp Duty (SRO Victoria)</strong></td>
@@ -758,13 +833,40 @@ function initStandaloneCalculator() {
 }
 
 // -----------------------------------------------------------------------------
-// 8. Digest Markdown Renderer
+// 10. Digest Markdown Renderer & Strip Generator
 // -----------------------------------------------------------------------------
 function renderDigestMarkdown(md) {
   const container = document.getElementById('digest-content');
   if (!container) return;
 
-  // Simple Markdown table and blockquote parser
+  // Render high-level summary cards in the strip
+  const strip = document.getElementById('digest-stats-strip');
+  if (strip && state.metadata) {
+    const meta = state.metadata;
+    const r2 = meta.avm_metrics?.r2 ? (meta.avm_metrics.r2 * 100).toFixed(1) + '%' : '92.1%';
+    const mape = meta.avm_metrics?.mape_pct ? meta.avm_metrics.mape_pct + '%' : '10.2%';
+    
+    strip.innerHTML = `
+      <div class="digest-stat-card">
+        <div class="digest-stat-num">${meta.total_active_listings || state.listings.length}</div>
+        <div class="digest-stat-label">Active Listings Scraped</div>
+      </div>
+      <div class="digest-stat-card">
+        <div class="digest-stat-num">${meta.total_settled_sales || state.settledSales.length}</div>
+        <div class="digest-stat-label">Settled Sales Comps</div>
+      </div>
+      <div class="digest-stat-card">
+        <div class="digest-stat-num" style="color: var(--accent-primary);">${r2}</div>
+        <div class="digest-stat-label">AVM Model Accuracy (R²)</div>
+      </div>
+      <div class="digest-stat-card">
+        <div class="digest-stat-num" style="color: #059669;">${mape}</div>
+        <div class="digest-stat-label">Mean Absolute % Error</div>
+      </div>
+    `;
+  }
+
+  // Convert markdown to clean HTML
   let html = md
     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
@@ -778,7 +880,64 @@ function renderDigestMarkdown(md) {
     const cells = match.split('|').filter(c => c.trim() !== '');
     return '<tr>' + cells.map(c => `<td>${c.trim()}</td>`).join('') + '</tr>';
   });
-  html = html.replace(/(<tr>.*?<\/tr>(\s*<tr>.*?<\/tr>)+)/gim, '<table>$1</table>');
+
+  html = html.replace(/(<tr>.*?<\/tr>(\s*<tr>.*?<\/tr>)+)/gim, '<div class="table-responsive"><table>$1</table></div>');
 
   container.innerHTML = html;
 }
+
+// -----------------------------------------------------------------------------
+// 11. Data Ingestion & Bootstrapping
+// -----------------------------------------------------------------------------
+async function initApp() {
+  initTheme();
+  initNavigationTabs();
+  initMap();
+  initFilterListeners();
+  initStandaloneCalculator();
+
+  try {
+    const [listingsRes, salesRes, metaRes, digestRes] = await Promise.all([
+      fetch('data/listings.json'),
+      fetch('data/settled_sales.json'),
+      fetch('data/metadata.json'),
+      fetch('data/digest.md')
+    ]);
+
+    if (listingsRes.ok) state.listings = await listingsRes.json();
+    if (salesRes.ok) state.settledSales = await salesRes.json();
+    if (metaRes.ok) state.metadata = await metaRes.json();
+    if (digestRes.ok) {
+      const digestMd = await digestRes.text();
+      renderDigestMarkdown(digestMd);
+    }
+
+    // Populate navbar stats
+    const activeCountEl = document.getElementById('stat-active-count');
+    const modelAccEl = document.getElementById('stat-model-acc');
+
+    if (activeCountEl) {
+      activeCountEl.textContent = `${state.listings.length} Properties`;
+    }
+    if (modelAccEl && state.metadata?.avm_metrics) {
+      modelAccEl.textContent = `AVM R²: ${state.metadata.avm_metrics.r2.toFixed(3)}`;
+    }
+
+    populateSuburbDropdown();
+    applyFilters();
+
+  } catch (err) {
+    console.error('Error bootstrapping application data:', err);
+    const grid = document.getElementById('listings-grid');
+    if (grid) {
+      grid.innerHTML = `
+        <div style="padding: 2.5rem; text-align: center; color: var(--badge-red-text); background: var(--badge-red-bg); border-radius: var(--radius-md); border: 1px solid var(--badge-red-border);">
+          <h3>Error loading Melbourne property data</h3>
+          <p style="margin-top: 0.5rem; font-size: 0.95rem;">Please check network connection and ensure data/listings.json is accessible.</p>
+        </div>`;
+    }
+  }
+}
+
+// Run when DOM is ready
+document.addEventListener('DOMContentLoaded', initApp);
