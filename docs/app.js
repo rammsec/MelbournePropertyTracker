@@ -377,23 +377,97 @@ function populateSuburbDropdown() {
   });
 }
 
+function populateAgencyDropdown() {
+  const agencySelect = document.getElementById('agency-filter');
+  if (!agencySelect) return;
+
+  // Major Victorian real estate agency networks
+  const primaryAgencies = [
+    { key: 'Ray White', label: 'Ray White' },
+    { key: 'Barry Plant', label: 'Barry Plant' },
+    { key: 'Jellis Craig', label: 'Jellis Craig' },
+    { key: 'Nelson Alexander', label: 'Nelson Alexander' },
+    { key: 'Buxton', label: 'Buxton Real Estate' },
+    { key: 'McGrath', label: 'McGrath Estate Agents' },
+    { key: 'Belle Property', label: 'Belle Property' },
+    { key: 'Marshall White', label: 'Marshall White' },
+    { key: 'Kay & Burton', label: 'Kay & Burton' },
+    { key: 'RT Edgar', label: 'RT Edgar' },
+    { key: 'Fletchers', label: 'Fletchers Real Estate' },
+    { key: 'Biggin & Scott', label: 'Biggin & Scott' },
+    { key: 'Hockingstuart', label: 'Hockingstuart' },
+    { key: 'Harcourts', label: 'Harcourts' },
+    { key: 'Woodards', label: 'Woodards' },
+    { key: 'Hodges', label: 'Hodges Real Estate' },
+    { key: 'Gary Peer', label: 'Gary Peer & Associates' },
+    { key: 'Miles Real Estate', label: 'Miles Real Estate' },
+    { key: 'Jas Stephens', label: 'Jas Stephens' },
+    { key: 'Compton Green', label: 'Compton Green' },
+    { key: 'Village Real Estate', label: 'Village Real Estate' },
+    { key: 'WHITEFOX', label: 'WHITEFOX Real Estate' },
+    { key: 'VICPROP', label: 'VICPROP' },
+    { key: 'Little Real Estate', label: 'Little Real Estate' },
+    { key: 'Dingle Partners', label: 'Dingle Partners' },
+    { key: 'MICM', label: 'MICM Real Estate' },
+    { key: 'Lucas Real Estate', label: 'Lucas Real Estate' },
+    { key: 'OBrien Real Estate', label: 'OBrien Real Estate' },
+    { key: 'Stone Real Estate', label: 'Stone Real Estate' },
+    { key: 'LJ Hooker', label: 'LJ Hooker' },
+    { key: 'First National', label: 'First National Real Estate' },
+    { key: 'Castran Gilbert', label: 'Castran Gilbert' }
+  ];
+
+  // Count active listings per agency network
+  const counts = {};
+  state.listings.forEach(item => {
+    const combined = `${item.agency_name || ''} ${item.source || ''}`.toLowerCase();
+    primaryAgencies.forEach(ag => {
+      const q = ag.key.toLowerCase();
+      if (combined.includes(q)) {
+        counts[ag.key] = (counts[ag.key] || 0) + 1;
+      }
+    });
+  });
+
+  agencySelect.innerHTML = `<option value="ALL">All Agency Networks (${state.listings.length})</option>`;
+
+  // Sort: agencies with listings first, then alphabetical
+  const sorted = [...primaryAgencies].sort((a, b) => {
+    const countA = counts[a.key] || 0;
+    const countB = counts[b.key] || 0;
+    if (countB !== countA) return countB - countA;
+    return a.label.localeCompare(b.label);
+  });
+
+  sorted.forEach(ag => {
+    const c = counts[ag.key] || 0;
+    const opt = document.createElement('option');
+    opt.value = ag.key;
+    opt.textContent = c > 0 ? `${ag.label} (${c})` : ag.label;
+    agencySelect.appendChild(opt);
+  });
+}
+
 function initFilterListeners() {
   // Search text input
   const searchInput = document.getElementById('search-input');
   searchInput?.addEventListener('input', (e) => {
     state.filters.search = e.target.value.trim().toLowerCase();
+    state.pagination.currentPage = 1;
     applyFilters();
   });
 
   // Suburb
   document.getElementById('suburb-filter')?.addEventListener('change', (e) => {
     state.filters.suburb = e.target.value;
+    state.pagination.currentPage = 1;
     applyFilters();
   });
 
   // Agency
   document.getElementById('agency-filter')?.addEventListener('change', (e) => {
     state.filters.agency = e.target.value;
+    state.pagination.currentPage = 1;
     applyFilters();
   });
 
@@ -555,7 +629,7 @@ function applyFilters() {
     if (f.agency !== 'ALL') {
       const src = (item.source || '').toLowerCase();
       const agName = (item.agency_name || '').toLowerCase();
-      const q = f.agency.toLowerCase();
+      const q = f.agency.toLowerCase().replace(/\s*(real estate|estate agents|pty ltd)/gi, '').trim();
       if (!src.includes(q) && !agName.includes(q)) return false;
     }
 
@@ -1176,6 +1250,7 @@ async function initApp() {
     }
 
     populateSuburbDropdown();
+    populateAgencyDropdown();
     updateTriageFilterLabels();
     applyFilters();
 

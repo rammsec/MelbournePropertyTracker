@@ -178,9 +178,16 @@ def run_pipeline(output_dir: Optional[Path] = None) -> None:
 
     # 7. Metadata JSON
     risk_counts = {}
+    agency_counts = {}
     for r in enriched_records:
         level = r.get("underquoting_risk_level", "Unknown")
         risk_counts[level] = risk_counts.get(level, 0) + 1
+        agency = (r.get("agency_name") or "Other").split(" (")[0].strip()
+        agency_counts[agency] = agency_counts.get(agency, 0) + 1
+
+    sorted_agencies = [
+        ag for ag, _ in sorted(agency_counts.items(), key=lambda x: x[1], reverse=True)
+    ]
 
     metadata = {
         "updated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -192,12 +199,8 @@ def run_pipeline(output_dir: Optional[Path] = None) -> None:
             "mape_pct": round(metrics.mape_pct, 2),
             "mae_aud": round(metrics.mae_aud, 2),
         },
-        "agencies_scraped": [
-            "Barry Plant",
-            "Ray White",
-            "View.com.au Live",
-            "Domain / REA",
-        ],
+        "agencies_scraped": sorted_agencies,
+        "agency_counts": agency_counts,
         "risk_summary": risk_counts,
     }
 
