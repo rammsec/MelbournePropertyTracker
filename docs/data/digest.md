@@ -1,5 +1,5 @@
 # Melbourne Property Market Daily Intelligence Digest
-**Generated**: 09 November 2026, 12:27 UTC  
+**Generated**: 09 November 2026, 12:56 UTC  
 **Active Listings Scraped**: 545 | **Settled Sales in AVM**: 540  
 **AVM Model**: HistGradientBoostingRegressor ($R^2$: 0.915, MAPE: 9.97%)  
 **Agencies Included**: Barry Plant, Ray White, View.com.au Live, Domain / REA
