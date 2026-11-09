@@ -1,5 +1,5 @@
 {
-  "updated_at_utc": "2026-11-09T13:47:34.975014+00:00",
+  "updated_at_utc": "2026-11-09T13:49:18.922114+00:00",
   "total_active_listings": 454,
   "total_settled_sales": 540,
   "avm_metrics": {
@@ -77,9 +77,9 @@
     "Castran Gilbert": 10
   },
   "risk_summary": {
-    "Distressed / Urgent Seller Deal": 142,
     "Low Risk (Accurate Guide)": 246,
     "Moderate Underquoting Risk": 28,
-    "High Underquoting Risk": 38
+    "High Underquoting Risk": 38,
+    "Distressed / Urgent Seller Deal": 142
   }
 }

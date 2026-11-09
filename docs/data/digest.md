@@ -1,5 +1,5 @@
 # Melbourne Property Market Daily Intelligence Digest
-**Generated**: 09 November 2026, 13:47 UTC  
+**Generated**: 09 November 2026, 13:49 UTC  
 **Active Listings Scraped**: 454 | **Settled Sales in AVM**: 540  
 **AVM Model**: HistGradientBoostingRegressor ($R^2$: 0.915, MAPE: 9.97%)  
 **Agencies Included**: Ray White, Barry Plant, Jellis Craig, Nelson Alexander, Buxton Real Estate, McGrath Estate Agents, Belle Property, Marshall White, Kay & Burton, RT Edgar, Fletchers Real Estate, Biggin & Scott, Hockingstuart, Harcourts, Woodards, Hodges Real Estate, Gary Peer & Associates, Miles Real Estate, Jas Stephens, Compton Green, Village Real Estate, WHITEFOX Real Estate, VICPROP, Little Real Estate, Dingle Partners, MICM Real Estate, Lucas Real Estate, OBrien Real Estate, Stone Real Estate, LJ Hooker, First National Real Estate, Castran Gilbert
@@ -24,11 +24,11 @@
 
 | Suburb | Address | Guide | AVM Fair Value | Discount Gap | Agency | Red Flag / Due Diligence |
 |---|---|---|---|---|---|---|
-| **Melbourne** | 611/181 Exhibition Street, Melbourne | $520,000 - $570,000 | $746,000 | **+30.9%** | Ray White (Southbank/CBD) | ✅ Clean Profile (Standard Due Diligence) |
-| **Southbank** | 1111/283 City Road, Southbank | $465,000 - $510,000 | $821,000 | **+61.0%** | Ray White (Southbank/CBD) | Windowless Room / Compact Layout Risk |
-| **Richmond** | G07/8 Garfield Street, Richmond | $530,000 - $565,000 | $831,000 | **+47.1%** | Ray White (Southbank/CBD) | ✅ Clean Profile (Standard Due Diligence) |
-| **Richmond** | 105/11 David Street, Richmond | $590,000 - $630,000 | $831,000 | **+31.9%** | Ray White (Southbank/CBD) | ✅ Clean Profile (Standard Due Diligence) |
-| **Melbourne** | E801/11 Flockhart Street, Abbotsford | $480,000 - $525,000 | $746,000 | **+42.1%** | Ray White (Southbank/CBD) | Windowless Room / Compact Layout Risk |
+| **Footscray** | 34 Cramer Street | $1,480,000 - $1,600,000 | $1,607,000 | **+0.4%** | Nelson Alexander | Stale Listing / Multiple Price Cuts |
+| **Yarraville** | 88 Blyth Street | $1,300,000 - $1,400,000 | $1,604,000 | **+14.6%** | Buxton Real Estate | Stale Listing / Multiple Price Cuts |
+| **Sunshine West** | Unit 4, 155 Murray Road | $330,000 - $360,000 | $424,000 | **+17.8%** | Kay & Burton | Windowless Room / Compact Layout Risk |
+| **St Kilda** | 180 Warrigal Road | $1,920,000 - $2,070,000 | $2,781,000 | **+34.4%** | Hockingstuart | Main Road / Traffic Noise | Old Building / Reno or Easements Needed |
+| **Docklands** | Unit 3, 63 Barkly Street | $530,000 - $570,000 | $751,000 | **+31.8%** | Hodges Real Estate | Windowless Room / Compact Layout Risk | High Owners Corp / Cladding Check |
 
 ---
 
