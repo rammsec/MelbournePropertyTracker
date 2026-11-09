@@ -16,9 +16,10 @@ import json
 import logging
 import os
 import sys
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -116,6 +117,11 @@ def run_pipeline(output_dir: Optional[Path] = None) -> None:
         rec["total_cash_to_close"] = round(c2c.total_cash_to_close, 2)
         rec["savings_surplus_or_shortfall"] = round(c2c.savings_surplus_or_shortfall, 2)
         rec["has_sufficient_funds"] = c2c.has_sufficient_funds
+
+        # Ensure listing_url is always populated for clickable card headings
+        if not rec.get("listing_url"):
+            clean_addr = f"{rec.get('street_address', '')} {rec.get('suburb_name', '')} VIC {rec.get('postcode', '')}".strip()
+            rec["listing_url"] = f"https://www.google.com/search?q={urllib.parse.quote_plus(clean_addr + ' property for sale')}"
 
         # Clean NaNs and infs for JSON serialization
         clean_rec = {}

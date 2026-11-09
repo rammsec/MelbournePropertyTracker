@@ -133,6 +133,18 @@
             </select>
           </div>
 
+          <div class="filter-group triage-filter-group">
+            <label for="triage-filter">My Shortlist / Triage</label>
+            <select id="triage-filter">
+              <option value="ALL">All Properties</option>
+              <option value="ACTIVE" selected>Hide Dropped (Active Only)</option>
+              <option value="LIKE">❤️ Liked / Shortlisted</option>
+              <option value="HOLD">⏸️ On Hold / Review</option>
+              <option value="DROP">❌ Dropped / Discarded</option>
+              <option value="UNREVIEWED">⚪ Unreviewed Only</option>
+            </select>
+          </div>
+
           <div class="filter-actions">
             <button id="reset-filters-btn" class="secondary-btn" title="Reset all search filters">Reset Filters</button>
           </div>
@@ -169,6 +181,26 @@
 
             <div id="listings-grid" class="listings-grid">
               <!-- Dynamically populated property cards -->
+            </div>
+
+            <!-- Pagination Bar -->
+            <div id="pagination-bar" class="pagination-bar">
+              <div class="pagination-info">
+                Showing <strong id="page-start">0</strong>–<strong id="page-end">0</strong> of <strong id="page-total">0</strong> properties
+              </div>
+              <div class="pagination-controls">
+                <button type="button" class="page-nav-btn" id="prev-page-btn" aria-label="Previous page">◀ Prev</button>
+                <div class="page-numbers" id="page-numbers"></div>
+                <button type="button" class="page-nav-btn" id="next-page-btn" aria-label="Next page">Next ▶</button>
+              </div>
+              <div class="pagination-size">
+                <label for="items-per-page">Per page:</label>
+                <select id="items-per-page">
+                  <option value="10" selected>10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>

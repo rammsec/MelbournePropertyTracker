@@ -15,6 +15,17 @@ const state = {
   markersLayer: null,
   activeTab: 'tracker-tab',
   currentTheme: localStorage.getItem('melb_tracker_theme') || 'light',
+  triage: (() => {
+    try {
+      return JSON.parse(localStorage.getItem('melb_property_triage') || '{}');
+    } catch (e) {
+      return {};
+    }
+  })(),
+  pagination: {
+    currentPage: 1,
+    itemsPerPage: 10
+  },
   filters: {
     search: '',
     suburb: 'ALL',
@@ -24,6 +35,7 @@ const state = {
     maxBudget: 1200000,
     minBeds: 0,
     flagFilter: 'ALL',
+    triage: 'ACTIVE',
     sortBy: 'risk-desc'
   }
 };
@@ -110,6 +122,66 @@ function toTitleCase(str) {
 
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getListingUrl(item) {
+  if (item && item.listing_url && typeof item.listing_url === 'string' && item.listing_url.startsWith('http')) {
+    return item.listing_url;
+  }
+  const cleanAddr = [item?.street_address, item?.suburb_name, 'VIC', item?.postcode].filter(Boolean).join(' ');
+  return `https://www.google.com/search?q=${encodeURIComponent(cleanAddr + ' property for sale')}`;
+}
+
+// Triage Data Helpers
+function saveTriageData() {
+  try {
+    localStorage.setItem('melb_property_triage', JSON.stringify(state.triage));
+  } catch (e) {
+    console.warn('Failed to save triage data to localStorage', e);
+  }
+}
+
+function setTriageDecision(listingId, decision) {
+  if (!listingId) return;
+  if (state.triage[listingId] === decision || decision === 'clear' || decision === null) {
+    delete state.triage[listingId];
+  } else {
+    state.triage[listingId] = decision;
+  }
+  saveTriageData();
+  updateTriageFilterLabels();
+  applyFilters();
+}
+
+function updateTriageFilterLabels() {
+  const triageSelect = document.getElementById('triage-filter');
+  if (!triageSelect) return;
+
+  const total = state.listings.length;
+  let likeCount = 0;
+  let holdCount = 0;
+  let dropCount = 0;
+
+  state.listings.forEach(l => {
+    const d = state.triage[l.listing_id];
+    if (d === 'like') likeCount++;
+    else if (d === 'hold') holdCount++;
+    else if (d === 'drop') dropCount++;
+  });
+
+  const activeCount = total - dropCount;
+  const unreviewedCount = Math.max(0, total - (likeCount + holdCount + dropCount));
+
+  const opts = triageSelect.options;
+  for (let i = 0; i < opts.length; i++) {
+    const val = opts[i].value;
+    if (val === 'ALL') opts[i].text = `All Properties (${total})`;
+    else if (val === 'ACTIVE') opts[i].text = `Hide Dropped (${activeCount})`;
+    else if (val === 'LIKE') opts[i].text = `❤️ Liked (${likeCount})`;
+    else if (val === 'HOLD') opts[i].text = `⏸️ On Hold (${holdCount})`;
+    else if (val === 'DROP') opts[i].text = `❌ Dropped (${dropCount})`;
+    else if (val === 'UNREVIEWED') opts[i].text = `⚪ Unreviewed (${unreviewedCount})`;
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -373,12 +445,42 @@ function initFilterListeners() {
   // Flag filter
   document.getElementById('flag-filter')?.addEventListener('change', (e) => {
     state.filters.flagFilter = e.target.value;
+    state.pagination.currentPage = 1;
+    applyFilters();
+  });
+
+  // Triage filter
+  document.getElementById('triage-filter')?.addEventListener('change', (e) => {
+    state.filters.triage = e.target.value;
+    state.pagination.currentPage = 1;
     applyFilters();
   });
 
   // Sort by
   document.getElementById('sort-by')?.addEventListener('change', (e) => {
     state.filters.sortBy = e.target.value;
+    state.pagination.currentPage = 1;
+    sortAndRenderListings();
+  });
+
+  // Pagination navigation listeners
+  document.getElementById('prev-page-btn')?.addEventListener('click', () => {
+    if (state.pagination.currentPage > 1) {
+      goToPage(state.pagination.currentPage - 1);
+    }
+  });
+
+  document.getElementById('next-page-btn')?.addEventListener('click', () => {
+    const totalPages = Math.ceil(state.filteredListings.length / state.pagination.itemsPerPage) || 1;
+    if (state.pagination.currentPage < totalPages) {
+      goToPage(state.pagination.currentPage + 1);
+    }
+  });
+
+  // Items per page selector
+  document.getElementById('items-per-page')?.addEventListener('change', (e) => {
+    state.pagination.itemsPerPage = Number(e.target.value);
+    state.pagination.currentPage = 1;
     sortAndRenderListings();
   });
 
@@ -393,16 +495,27 @@ function initFilterListeners() {
       maxBudget: 2500000,
       minBeds: 0,
       flagFilter: 'ALL',
+      triage: 'ALL',
       sortBy: 'risk-desc'
     };
+    state.pagination.currentPage = 1;
     if (searchInput) searchInput.value = '';
-    document.getElementById('suburb-filter').value = 'ALL';
-    document.getElementById('agency-filter').value = 'ALL';
-    document.getElementById('type-filter').value = 'ALL';
-    document.getElementById('risk-filter').value = 'ALL';
-    document.getElementById('flag-filter').value = 'ALL';
-    slider.value = 2500000;
-    budgetDisplay.textContent = 'Any Budget';
+    const subSel = document.getElementById('suburb-filter');
+    if (subSel) subSel.value = 'ALL';
+    const agSel = document.getElementById('agency-filter');
+    if (agSel) agSel.value = 'ALL';
+    const typeSel = document.getElementById('type-filter');
+    if (typeSel) typeSel.value = 'ALL';
+    const riskSel = document.getElementById('risk-filter');
+    if (riskSel) riskSel.value = 'ALL';
+    const flagSel = document.getElementById('flag-filter');
+    if (flagSel) flagSel.value = 'ALL';
+    const triageSel = document.getElementById('triage-filter');
+    if (triageSel) triageSel.value = 'ALL';
+    const sortSel = document.getElementById('sort-by');
+    if (sortSel) sortSel.value = 'risk-desc';
+    if (slider) slider.value = 2500000;
+    if (budgetDisplay) budgetDisplay.textContent = 'Any Budget';
     document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
     document.querySelector('.preset-btn[data-preset="2500000"]')?.classList.add('active');
     document.querySelectorAll('#beds-selector .pill-btn').forEach(b => b.classList.remove('active'));
@@ -469,6 +582,14 @@ function applyFilters() {
       if (f.flagFilter === 'BANK_RESTRICTED' && !heading.includes('UNDERSIZED')) return false;
     }
 
+    // Triage / Shortlist Filter
+    const decision = state.triage[item.listing_id];
+    if (f.triage === 'ACTIVE' && decision === 'drop') return false;
+    if (f.triage === 'LIKE' && decision !== 'like') return false;
+    if (f.triage === 'HOLD' && decision !== 'hold') return false;
+    if (f.triage === 'DROP' && decision !== 'drop') return false;
+    if (f.triage === 'UNREVIEWED' && decision) return false;
+
     return true;
   });
 
@@ -495,16 +616,32 @@ function sortAndRenderListings() {
   const grid = document.getElementById('listings-grid');
   if (!grid) return;
 
-  if (list.length === 0) {
+  const totalItems = list.length;
+  const perPage = state.pagination.itemsPerPage;
+  const totalPages = Math.ceil(totalItems / perPage) || 1;
+
+  if (state.pagination.currentPage > totalPages) {
+    state.pagination.currentPage = totalPages;
+  }
+  if (state.pagination.currentPage < 1) {
+    state.pagination.currentPage = 1;
+  }
+  const currentPage = state.pagination.currentPage;
+  const startIndex = (currentPage - 1) * perPage;
+  const pageItems = list.slice(startIndex, startIndex + perPage);
+
+  renderPagination(totalItems, currentPage, perPage, totalPages);
+
+  if (totalItems === 0) {
     grid.innerHTML = `
       <div style="padding: 3.5rem 1.5rem; text-align: center; color: var(--text-muted); background: var(--bg-surface); border-radius: var(--radius-lg); border: 1.5px dashed var(--border-subtle);">
         <h3 style="color: var(--text-heading); font-size: 1.25rem; font-weight: 700;">No properties match your filter criteria</h3>
-        <p style="font-size: 0.95rem; margin-top: 0.5rem; color: var(--text-secondary);">Try raising the price ceiling, clearing the search keyword, or selecting "All Melbourne Metro".</p>
+        <p style="font-size: 0.95rem; margin-top: 0.5rem; color: var(--text-secondary);">Try raising the price ceiling, clearing the search keyword, or selecting "All Properties" under Shortlist / Triage.</p>
       </div>`;
     return;
   }
 
-  grid.innerHTML = list.map(item => renderPropertyCard(item)).join('');
+  grid.innerHTML = pageItems.map(item => renderPropertyCard(item)).join('');
 
   // Attach card event listeners
   grid.querySelectorAll('.property-card').forEach(card => {
@@ -521,6 +658,20 @@ function sortAndRenderListings() {
       openCompsModal(targetItem);
     });
 
+    // Triage buttons
+    card.querySelectorAll('.triage-btn').forEach(tbtn => {
+      tbtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const action = tbtn.getAttribute('data-action');
+        setTriageDecision(listingId, action);
+      });
+    });
+
+    card.querySelector('.triage-clear-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setTriageDecision(listingId, 'clear');
+    });
+
     card.addEventListener('click', () => {
       if (state.map && targetItem?.latitude && targetItem?.longitude) {
         state.map.setView([targetItem.latitude, targetItem.longitude], 15, { animate: true });
@@ -529,8 +680,72 @@ function sortAndRenderListings() {
   });
 }
 
+function renderPagination(totalItems, currentPage, perPage, totalPages) {
+  const bar = document.getElementById('pagination-bar');
+  if (!bar) return;
+
+  if (totalItems === 0) {
+    bar.style.display = 'none';
+    return;
+  }
+  bar.style.display = 'flex';
+
+  const startEl = document.getElementById('page-start');
+  const endEl = document.getElementById('page-end');
+  const totalEl = document.getElementById('page-total');
+  if (startEl) startEl.textContent = ((currentPage - 1) * perPage + 1).toLocaleString();
+  if (endEl) endEl.textContent = Math.min(currentPage * perPage, totalItems).toLocaleString();
+  if (totalEl) totalEl.textContent = totalItems.toLocaleString();
+
+  const prevBtn = document.getElementById('prev-page-btn');
+  const nextBtn = document.getElementById('next-page-btn');
+  if (prevBtn) prevBtn.disabled = currentPage <= 1;
+  if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+
+  const pageNumbersEl = document.getElementById('page-numbers');
+  if (pageNumbersEl) {
+    pageNumbersEl.innerHTML = buildPageNumbersHtml(currentPage, totalPages);
+    pageNumbersEl.querySelectorAll('.page-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = Number(btn.getAttribute('data-page'));
+        goToPage(p);
+      });
+    });
+  }
+}
+
+function buildPageNumbersHtml(current, total) {
+  if (total <= 1) return '';
+  const pages = [];
+  if (total <= 7) {
+    for (let i = 1; i <= total; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (current > 3) pages.push('...');
+    const start = Math.max(2, current - 1);
+    const end = Math.min(total - 1, current + 1);
+    for (let i = start; i <= end; i++) {
+      if (!pages.includes(i)) pages.push(i);
+    }
+    if (current < total - 2) pages.push('...');
+    if (!pages.includes(total)) pages.push(total);
+  }
+
+  return pages.map(p => {
+    if (p === '...') return `<span class="page-ellipsis">…</span>`;
+    return `<button type="button" class="page-btn ${p === current ? 'active' : ''}" data-page="${p}">${p}</button>`;
+  }).join('');
+}
+
+function goToPage(page) {
+  state.pagination.currentPage = page;
+  sortAndRenderListings();
+  const grid = document.getElementById('listings-grid');
+  if (grid) grid.scrollTop = 0;
+}
+
 // -----------------------------------------------------------------------------
-// 7. Property Card Component (High Readability)
+// 7. Property Card Component (High Readability & Clickable Posts)
 // -----------------------------------------------------------------------------
 function renderPropertyCard(item) {
   let riskBadgeClass = 'risk-green';
@@ -569,27 +784,42 @@ function renderPropertyCard(item) {
     fhbBadge = `<span class="fhb-pill">5% Deposit Eligible ($0 LMI)</span>`;
   }
 
-  const externalLinkHtml = item.listing_url ? `
-    <a href="${item.listing_url}" target="_blank" rel="noopener noreferrer" class="card-btn" onclick="event.stopPropagation();">
-      View Listing ↗
-    </a>` : '';
-
+  const postUrl = getListingUrl(item);
   const displayAddress = cleanDisplayAddress(item);
 
+  // Triage state
+  const decision = state.triage[item.listing_id];
+  let cardTriageClass = '';
+  let triageBadgeHtml = `<span style="color: var(--text-muted); font-weight: 500;">⚪ Unreviewed</span>`;
+  if (decision === 'like') {
+    cardTriageClass = 'is-liked';
+    triageBadgeHtml = `<span class="badge triage-badge-like">❤️ Liked</span>`;
+  } else if (decision === 'hold') {
+    cardTriageClass = 'is-hold';
+    triageBadgeHtml = `<span class="badge triage-badge-hold">⏸️ On Hold</span>`;
+  } else if (decision === 'drop') {
+    cardTriageClass = 'is-dropped';
+    triageBadgeHtml = `<span class="badge triage-badge-drop">❌ Dropped</span>`;
+  }
+
   return `
-    <article class="property-card" data-id="${item.listing_id}">
+    <article class="property-card ${cardTriageClass}" data-id="${item.listing_id}">
       <div class="card-top">
         <div class="card-badges">
           <span class="badge ${riskBadgeClass}">
             ${riskIcon} ${riskTitle}: ${gapPct > 0 ? '+' : ''}${gapPct}%
           </span>
           <span class="badge agency-badge">${item.agency_name || item.source}</span>
+          ${decision ? triageBadgeHtml : ''}
         </div>
         <div class="card-source-date">${item.sale_method || 'Auction'}</div>
       </div>
 
       <div class="card-address-block">
-        <div class="card-address">${displayAddress}</div>
+        <a href="${postUrl}" target="_blank" rel="noopener noreferrer" class="card-title-link" onclick="event.stopPropagation();" title="Open actual property listing post in new tab">
+          <span class="card-address">${displayAddress}</span>
+          <span class="external-icon" aria-hidden="true">↗</span>
+        </a>
         <div class="card-suburb">${item.suburb_name}, VIC ${item.postcode || ''} &bull; ${item.property_type}</div>
       </div>
 
@@ -607,6 +837,26 @@ function renderPropertyCard(item) {
           <span class="val-number gap-${riskBadgeClass.replace('risk-', '')}">
             ${gapPct > 0 ? '+' : ''}$${gapAud.toLocaleString()} (${gapPct > 0 ? '+' : ''}${gapPct}%)
           </span>
+        </div>
+      </div>
+
+      <!-- Triage decision bar: Like, Hold, Drop -->
+      <div class="card-triage-bar" onclick="event.stopPropagation();">
+        <div class="triage-label-group">
+          <span>My Decision:</span>
+          ${triageBadgeHtml}
+        </div>
+        <div class="triage-btns">
+          <button type="button" class="triage-btn triage-like ${decision === 'like' ? 'active' : ''}" data-action="like" title="Like / Shortlist this property">
+            <span>${decision === 'like' ? '❤️' : '🤍'}</span> Like
+          </button>
+          <button type="button" class="triage-btn triage-hold ${decision === 'hold' ? 'active' : ''}" data-action="hold" title="Keep on hold / Under review">
+            <span>⏸️</span> Hold
+          </button>
+          <button type="button" class="triage-btn triage-drop ${decision === 'drop' ? 'active' : ''}" data-action="drop" title="Drop / Discard this property">
+            <span>❌</span> Drop
+          </button>
+          ${decision ? `<button type="button" class="triage-clear-btn" data-action="clear" title="Reset decision">↺ Reset</button>` : ''}
         </div>
       </div>
 
@@ -630,7 +880,9 @@ function renderPropertyCard(item) {
         <div class="btn-group">
           <button type="button" class="card-btn primary c2c-btn">💰 Cash to Close</button>
           <button type="button" class="card-btn comps-btn">📊 Comps</button>
-          ${externalLinkHtml}
+          <a href="${postUrl}" target="_blank" rel="noopener noreferrer" class="card-btn" onclick="event.stopPropagation();" title="Open actual listing post in new tab">
+            View Listing ↗
+          </a>
         </div>
       </div>
     </article>
@@ -924,6 +1176,7 @@ async function initApp() {
     }
 
     populateSuburbDropdown();
+    updateTriageFilterLabels();
     applyFilters();
 
   } catch (err) {
