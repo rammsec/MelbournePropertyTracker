@@ -1,5 +1,5 @@
 {
-  "updated_at_utc": "2026-11-09T07:08:52.948014+00:00",
+  "updated_at_utc": "2026-11-09T07:12:49.950877+00:00",
   "total_active_listings": 545,
   "total_settled_sales": 540,
   "avm_metrics": {
@@ -15,9 +15,9 @@
     "Domain / REA"
   ],
   "risk_summary": {
-    "Distressed / Urgent Seller Deal": 252,
     "Low Risk (Accurate Guide)": 236,
     "Moderate Underquoting Risk": 13,
-    "High Underquoting Risk": 44
+    "High Underquoting Risk": 44,
+    "Distressed / Urgent Seller Deal": 252
   }
 }
