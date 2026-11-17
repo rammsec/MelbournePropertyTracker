@@ -1,6 +1,6 @@
 {
-  "updated_at_utc": "2026-11-16T00:28:22.156360+00:00",
-  "total_active_listings": 454,
+  "updated_at_utc": "2026-11-17T03:16:34.590937+00:00",
+  "total_active_listings": 452,
   "total_settled_sales": 540,
   "avm_metrics": {
     "model_backend": "HistGradientBoostingRegressor",
@@ -43,7 +43,7 @@
     "Castran Gilbert"
   ],
   "agency_counts": {
-    "Ray White": 144,
+    "Ray White": 142,
     "Barry Plant": 10,
     "Jellis Craig": 10,
     "Nelson Alexander": 10,
@@ -77,9 +77,9 @@
     "Castran Gilbert": 10
   },
   "risk_summary": {
-    "Low Risk (Accurate Guide)": 246,
+    "Low Risk (Accurate Guide)": 245,
+    "Distressed / Urgent Seller Deal": 142,
     "Moderate Underquoting Risk": 28,
-    "High Underquoting Risk": 38,
-    "Distressed / Urgent Seller Deal": 142
+    "High Underquoting Risk": 37
   }
 }
