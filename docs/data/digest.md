@@ -1,5 +1,5 @@
 # Melbourne Property Market Daily Intelligence Digest
-**Generated**: 17 November 2026, 03:16 UTC  
+**Generated**: 18 November 2026, 02:39 UTC  
 **Active Listings Scraped**: 452 | **Settled Sales in AVM**: 540  
 **AVM Model**: HistGradientBoostingRegressor ($R^2$: 0.915, MAPE: 9.97%)  
 **Agencies Included**: Ray White, Barry Plant, Jellis Craig, Nelson Alexander, Buxton Real Estate, McGrath Estate Agents, Belle Property, Marshall White, Kay & Burton, RT Edgar, Fletchers Real Estate, Biggin & Scott, Hockingstuart, Harcourts, Woodards, Hodges Real Estate, Gary Peer & Associates, Miles Real Estate, Jas Stephens, Compton Green, Village Real Estate, WHITEFOX Real Estate, VICPROP, Little Real Estate, Dingle Partners, MICM Real Estate, Lucas Real Estate, OBrien Real Estate, Stone Real Estate, LJ Hooker, First National Real Estate, Castran Gilbert
@@ -24,11 +24,11 @@
 
 | Suburb | Address | Guide | AVM Fair Value | Discount Gap | Agency | Red Flag / Due Diligence |
 |---|---|---|---|---|---|---|
-| **Southbank** | 3105/135 City Road, Southbank | $595,000 | $821,000 | **+38.0%** | Ray White (Southbank/CBD) | ✅ Clean Profile (Standard Due Diligence) |
-| **Southbank** | 510/250 City Road, Southbank | $290,000 - $315,000 | $821,000 | **+160.6%** | Ray White (Southbank/CBD) | Windowless Room / Compact Layout Risk |
-| **Melbourne** | 314/74 Queens Road, Melbourne | $500,000 - $525,000 | $746,000 | **+42.1%** | Ray White (Southbank/CBD) | Windowless Room / Compact Layout Risk |
-| **Melbourne** | 504/233 Collins Street, Melbourne | $295,000 - $320,000 | $746,000 | **+133.1%** | Ray White (Southbank/CBD) | Windowless Room / Compact Layout Risk |
-| **Melbourne** | 102/51 Galada Avenue, Parkville | $490,000 - $529,000 | $746,000 | **+41.0%** | Ray White (Southbank/CBD) | Windowless Room / Compact Layout Risk |
+| **Footscray** | 34 Cramer Street | $1,480,000 - $1,600,000 | $1,607,000 | **+0.4%** | Nelson Alexander | Stale Listing / Multiple Price Cuts |
+| **Yarraville** | 88 Blyth Street | $1,300,000 - $1,400,000 | $1,604,000 | **+14.6%** | Buxton Real Estate | Stale Listing / Multiple Price Cuts |
+| **Sunshine West** | Unit 4, 155 Murray Road | $330,000 - $360,000 | $424,000 | **+17.8%** | Kay & Burton | Windowless Room / Compact Layout Risk |
+| **St Kilda** | 180 Warrigal Road | $1,920,000 - $2,070,000 | $2,781,000 | **+34.4%** | Hockingstuart | Main Road / Traffic Noise | Old Building / Reno or Easements Needed |
+| **Docklands** | Unit 3, 63 Barkly Street | $530,000 - $570,000 | $751,000 | **+31.8%** | Hodges Real Estate | Windowless Room / Compact Layout Risk | High Owners Corp / Cladding Check |
 
 ---
 

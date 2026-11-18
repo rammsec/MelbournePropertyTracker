@@ -1,5 +1,5 @@
 {
-  "updated_at_utc": "2026-11-17T03:16:34.590937+00:00",
+  "updated_at_utc": "2026-11-18T02:39:19.797254+00:00",
   "total_active_listings": 452,
   "total_settled_sales": 540,
   "avm_metrics": {
@@ -78,8 +78,8 @@
   },
   "risk_summary": {
     "Low Risk (Accurate Guide)": 245,
-    "Distressed / Urgent Seller Deal": 142,
     "Moderate Underquoting Risk": 28,
-    "High Underquoting Risk": 37
+    "High Underquoting Risk": 37,
+    "Distressed / Urgent Seller Deal": 142
   }
 }
