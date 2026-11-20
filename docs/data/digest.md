@@ -1,5 +1,5 @@
 # Melbourne Property Market Daily Intelligence Digest
-**Generated**: 19 November 2026, 02:06 UTC  
+**Generated**: 20 November 2026, 01:56 UTC  
 **Active Listings Scraped**: 452 | **Settled Sales in AVM**: 540  
 **AVM Model**: HistGradientBoostingRegressor ($R^2$: 0.915, MAPE: 9.97%)  
 **Agencies Included**: Ray White, Barry Plant, Jellis Craig, Nelson Alexander, Buxton Real Estate, McGrath Estate Agents, Belle Property, Marshall White, Kay & Burton, RT Edgar, Fletchers Real Estate, Biggin & Scott, Hockingstuart, Harcourts, Woodards, Hodges Real Estate, Gary Peer & Associates, Miles Real Estate, Jas Stephens, Compton Green, Village Real Estate, WHITEFOX Real Estate, VICPROP, Little Real Estate, Dingle Partners, MICM Real Estate, Lucas Real Estate, OBrien Real Estate, Stone Real Estate, LJ Hooker, First National Real Estate, Castran Gilbert
